@@ -5,21 +5,11 @@ import type { CreationEngine } from "../engine";
 
 import { Navigation } from "./navigation";
 
-/**
- * Middleware for Application's navigation functionality.
- *
- * Adds the following methods to Application:
- * * Application#navigation
- */
 export class CreationNavigationPlugin {
-    /** @ignore */
     public static extension: ExtensionMetadata = ExtensionType.Application;
 
     private static _onResize: (() => void) | null;
 
-    /**
-     * Initialize the plugin with scope of application instance
-     */
     public static init(): void {
         const app = this as unknown as CreationEngine;
 
@@ -31,9 +21,6 @@ export class CreationNavigationPlugin {
         app.resize();
     }
 
-    /**
-     * Clean up the ticker, scoped to application
-     */
     public static destroy(): void {
         const app = this as unknown as Application;
         app.navigation = null as unknown as Navigation;

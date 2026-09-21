@@ -6,17 +6,15 @@ import { Button } from "../ui/Button";
 import { Label } from "../ui/Label";
 import { RoundedBox } from "../ui/RoundedBox";
 
-/** Popup that shows up when gameplay is paused */
 export class PausePopup extends Container {
-    /** The dark semi-transparent background covering current screen */
     private bg: Sprite;
-    /** Container for the popup UI components */
+
     private panel: Container;
-    /** The popup title label */
+
     private title: Label;
-    /** Button that closes the popup */
+
     private doneButton: Button;
-    /** The panel background */
+
     private panelBase: RoundedBox;
 
     constructor() {
@@ -48,7 +46,6 @@ export class PausePopup extends Container {
         this.panel.addChild(this.doneButton);
     }
 
-    /** Resize the popup, fired whenever window size changes */
     public resize(width: number, height: number) {
         this.bg.width = width;
         this.bg.height = height;
@@ -56,7 +53,6 @@ export class PausePopup extends Container {
         this.panel.y = height * 0.5;
     }
 
-    /** Present the popup, animated */
     public async show() {
         const currentEngine = engine();
         if (currentEngine.navigation.currentScreen) {
@@ -74,7 +70,6 @@ export class PausePopup extends Container {
         );
     }
 
-    /** Dismiss the popup, animated */
     public async hide() {
         const currentEngine = engine();
         if (currentEngine.navigation.currentScreen) {

@@ -1,26 +1,30 @@
 import { Container, Graphics } from "pixi.js";
 
+import { PLAYER_START_AMMO } from "./gameConfig";
 import { Laser } from "./Laser";
 
-/**
- * Корабель гравця.
- * - Рухається виключно по горизонталі в межах екрана.
- * - Керується кнопками вліво/вправо на клавіатурі.
- * - Стріляє клавішею "Пробіл".
- * - Максимум 10 пострілів на рівень.
- */
+const PLAYER_RADIUS = 22;
+const PLAYER_SPEED = 460;
+const SCREEN_EDGE_PADDING = 6;
+const THRUSTER_FLICKER_MIN = 10;
+const THRUSTER_FLICKER_RANGE = 6;
+const THRUSTER_CORE_RATIO = 0.6;
+const TILT_FACTOR = 0.18;
+const TILT_SMOOTHING = 0.2;
+const FIRE_COOLDOWN_SECONDS = 0.22;
+const BULLET_SPAWN_OFFSET = 8;
+
 export class Player extends Container {
-    public radius = 22;
+    public radius = PLAYER_RADIUS;
     public vx = 0;
-    public speed = 460;
-    public ammo = 10;
-    public maxAmmo = 10;
+    public speed = PLAYER_SPEED;
+    public ammo = PLAYER_START_AMMO;
+    public maxAmmo = PLAYER_START_AMMO;
 
     private shipGraphics: Graphics;
     private thrusterGraphics: Graphics;
     private animTimer = 0;
 
-    // Клавіші керування
     private keys: Record<string, boolean> = {};
     private spacePressed = false;
     private fireDebounce = 0;
@@ -41,7 +45,6 @@ export class Player extends Container {
     private drawShip(): void {
         this.shipGraphics.clear();
 
-        // Корпус корабля (напрямлений вгору)
         this.shipGraphics
             .poly([
                 0, -28, -8, -8, -22, 16, -14, 18, -6, 12, 0, 14, 6, 12, 14, 18,
@@ -50,17 +53,14 @@ export class Player extends Container {
             .fill({ color: 0xdff9fb, alpha: 1 })
             .stroke({ width: 2, color: 0x00d2d3 });
 
-        // Крила та деталі
         this.shipGraphics
             .poly([0, -16, -12, 10, 0, 4, 12, 10])
             .fill({ color: 0x0abde3, alpha: 0.95 });
 
-        // Гармата по центру
         this.shipGraphics
             .rect(-2.5, -32, 5, 12)
             .fill({ color: 0x576574, alpha: 1 });
 
-        // Кабіна пілота
         this.shipGraphics
             .roundRect(-3.5, -10, 7, 14, 3.5)
             .fill({ color: 0x0984e3, alpha: 0.95 });
@@ -68,16 +68,15 @@ export class Player extends Container {
 
     private updateThruster(): void {
         this.thrusterGraphics.clear();
-        const flicker = Math.random() * 6 + 10;
+        const flicker =
+            Math.random() * THRUSTER_FLICKER_RANGE + THRUSTER_FLICKER_MIN;
 
-        // Зовнішнє полум'я
         this.thrusterGraphics
             .poly([-4, 14, 0, 14 + flicker, 4, 14])
             .fill({ color: 0xff7675, alpha: 0.85 });
 
-        // Внутрішнє ядро
         this.thrusterGraphics
-            .poly([-2, 14, 0, 14 + flicker * 0.6, 2, 14])
+            .poly([-2, 14, 0, 14 + flicker * THRUSTER_CORE_RATIO, 2, 14])
             .fill({ color: 0x74b9ff, alpha: 0.95 });
     }
 
@@ -106,8 +105,11 @@ export class Player extends Container {
         });
     }
 
-    /** Скидання позиції та набоїв для нового раунду */
-    public reset(startX: number, startY: number, ammoCount = 10): void {
+    public reset(
+        startX: number,
+        startY: number,
+        ammoCount = PLAYER_START_AMMO,
+    ): void {
         this.x = startX;
         this.y = startY;
         this.vx = 0;
@@ -131,7 +133,6 @@ export class Player extends Container {
             this.fireDebounce -= deltaSeconds;
         }
 
-        // --- Рух лише по горизонталі кнопками вліво/вправо ---
         let dirX = 0;
         if (this.keys["ArrowLeft"] || this.keys["KeyA"]) dirX -= 1;
         if (this.keys["ArrowRight"] || this.keys["KeyD"]) dirX += 1;
@@ -139,8 +140,7 @@ export class Player extends Container {
         this.vx = dirX * this.speed;
         this.x += this.vx * deltaSeconds;
 
-        // Обмеження екрану: корабель не виходить за межі екрану
-        const pad = this.radius + 6;
+        const pad = this.radius + SCREEN_EDGE_PADDING;
         if (this.x < pad) {
             this.x = pad;
             this.vx = 0;
@@ -150,20 +150,17 @@ export class Player extends Container {
             this.vx = 0;
         }
 
-        // Невеликий нахил при русі вліво/вправо
-        const targetRotation = (this.vx / this.speed) * 0.18;
-        this.rotation += (targetRotation - this.rotation) * 0.2;
+        const targetRotation = (this.vx / this.speed) * TILT_FACTOR;
+        this.rotation += (targetRotation - this.rotation) * TILT_SMOOTHING;
 
-        // --- Стрільба клавішею "Пробіл" (максимум 10 пострілів) ---
         if (this.spacePressed && this.fireDebounce <= 0) {
             if (this.ammo > 0) {
                 this.ammo -= 1;
-                this.fireDebounce = 0.22; // Невеликий інтервал між пострілами
+                this.fireDebounce = FIRE_COOLDOWN_SECONDS;
 
-                // Створюємо кулю перед кораблем
                 const bullet = new Laser(
                     this.x,
-                    this.y - this.radius - 8,
+                    this.y - this.radius - BULLET_SPAWN_OFFSET,
                     true,
                 );
                 onShoot(bullet);

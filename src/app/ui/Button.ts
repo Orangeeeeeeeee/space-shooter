@@ -13,9 +13,6 @@ const defaultButtonOptions = {
 
 type ButtonOptions = typeof defaultButtonOptions;
 
-/**
- * The big rectangle button, with a label, idle and pressed states
- */
 export class Button extends FancyButton {
     constructor(options: Partial<ButtonOptions> = {}) {
         const opts = { ...defaultButtonOptions, ...options };

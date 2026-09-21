@@ -1,5 +1,3 @@
-// From a very good answer about pseudo random numbers on stack overflow
-// https://stackoverflow.com/a/47593316
 function xmur3(str: string): () => number {
     let h = 1779033703 ^ str.length;
 
@@ -30,19 +28,10 @@ function mulberry32(a: number): () => number {
 const HASH_CHARSET =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-/**
- * Creates a seeded random function similar to Math.random() based on given seed hash
- * @param seed - The hash string, can be anything
- * @returns Function that can be used instead Math.random
- */
 export function randomSeeded(seed: string): () => number {
     return mulberry32(xmur3(seed)());
 }
 
-/**
- * Returns a random color
- * @param random - The random function to be used (defaults to Math.random)
- */
 export function randomColor(random = Math.random): number {
     const r = Math.floor(0xff * random());
     const g = Math.floor(0xff * random());
@@ -50,12 +39,6 @@ export function randomColor(random = Math.random): number {
     return (r << 16) | (g << 8) | b;
 }
 
-/**
- * Returns a random number within a range
- * @param min - lowest number (inclusive)
- * @param max - highest number (exclusive)
- * @param random - The random function to be used (defaults to Math.random)
- */
 export function randomRange(
     min: number,
     max: number,
@@ -63,17 +46,11 @@ export function randomRange(
 ): number {
     const a = Math.min(min, max);
     const b = Math.max(min, max);
-
     const v = a + (b - a) * random();
 
     return v;
 }
 
-/**
- * Returns a random item from an object or array
- * @param arr - array to be selected
- * @param random - The random function to be used (defaults to Math.random)
- */
 export function randomItem<T>(obj: T, random = Math.random): T[keyof T] {
     if (Array.isArray(obj)) {
         return obj[Math.floor(random() * obj.length)];
@@ -84,22 +61,10 @@ export function randomItem<T>(obj: T, random = Math.random): T[keyof T] {
     return obj[key as keyof T];
 }
 
-/**
- * Returns a random boolean.
- * @param weight - The chance of true value, between 0 and 1
- * @param random - The random function to be used (defaults to Math.random)
- * @returns
- */
 export function randomBool(weight = 0.5, random = Math.random): boolean {
     return random() < weight;
 }
 
-/**
- * Random shuffle an array in place, without cloning it
- * @param array - The array that will be shuffled
- * @param random - The random function to be used (defaults to Math.random)
- * @returns
- */
 export function randomShuffle<T>(array: T[], random = Math.random): T[] {
     let currentIndex = array.length;
     let temporaryValue;
@@ -116,12 +81,6 @@ export function randomShuffle<T>(array: T[], random = Math.random): T[] {
     return array;
 }
 
-/**
- * Return a random string hash - not guaranteed to be unique
- * @param length - The length of the hash
- * @param random - The random function to be used (defaults to Math.random)
- * @returns
- */
 export function randomHash(
     length: number,
     random = Math.random,
@@ -137,24 +96,10 @@ export function randomHash(
     return result;
 }
 
-/**
- * Returns a random number within a range.
- *
- * @param min - The minimum value (inclusive).
- * @param max - The maximum value (exclusive).
- */
 export function randomFloat(min: number, max: number, random = Math.random) {
     return random() * (max - min) + min;
 }
 
-/**
- * Returns a random integer within a range.
- *
- * @param min - The minimum value (inclusive).
- * @param max - The minimum value (inclusive).
- * @param random - The random function to be used (defaults to Math.random)
- */
 export function randomInt(min: number, max: number, random = Math.random) {
-    // This function will return 4 if float result is 3.5 because of +1. Should return 3 instead?
     return Math.floor(random() * (max - min + 1)) + min;
 }

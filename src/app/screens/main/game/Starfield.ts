@@ -1,5 +1,14 @@
 import { Container, Graphics } from "pixi.js";
 
+import { DEFAULT_SCREEN_HEIGHT, DEFAULT_SCREEN_WIDTH } from "./gameConfig";
+
+const STAR_COUNT = 120;
+const NEAR_LAYER_THRESHOLD = 0.8;
+const MID_LAYER_THRESHOLD = 0.5;
+const FAR_LAYER = { size: 1.5, speed: 40, alpha: 0.4 };
+const MID_LAYER = { size: 2.2, speed: 110, alpha: 0.7 };
+const NEAR_LAYER = { size: 3, speed: 220, alpha: 0.9 };
+
 interface Star {
     x: number;
     y: number;
@@ -12,14 +21,14 @@ interface Star {
 export class Starfield extends Container {
     private graphics: Graphics;
     private stars: Star[] = [];
-    private fieldWidth = 800;
-    private fieldHeight = 600;
+    private fieldWidth = DEFAULT_SCREEN_WIDTH;
+    private fieldHeight = DEFAULT_SCREEN_HEIGHT;
 
     constructor() {
         super();
         this.graphics = new Graphics();
         this.addChild(this.graphics);
-        this.initStars(120);
+        this.initStars(STAR_COUNT);
     }
 
     private initStars(count: number) {
@@ -28,18 +37,12 @@ export class Starfield extends Container {
 
         for (let i = 0; i < count; i++) {
             const layer = Math.random();
-            let size = 1.5;
-            let speed = 40;
-            let alpha = 0.4;
+            let { size, speed, alpha } = FAR_LAYER;
 
-            if (layer > 0.8) {
-                size = 3;
-                speed = 220;
-                alpha = 0.9;
-            } else if (layer > 0.5) {
-                size = 2.2;
-                speed = 110;
-                alpha = 0.7;
+            if (layer > NEAR_LAYER_THRESHOLD) {
+                ({ size, speed, alpha } = NEAR_LAYER);
+            } else if (layer > MID_LAYER_THRESHOLD) {
+                ({ size, speed, alpha } = MID_LAYER);
             }
 
             this.stars.push({
@@ -77,7 +80,6 @@ export class Starfield extends Container {
         this.fieldWidth = width;
         this.fieldHeight = height;
 
-        // Scale existing star positions to new dimensions
         if (oldW > 0 && oldH > 0) {
             for (const star of this.stars) {
                 star.x = (star.x / oldW) * width;

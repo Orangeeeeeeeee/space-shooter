@@ -15,6 +15,8 @@ export default tseslint.config(
             ecmaVersion: "latest",
             sourceType: "module",
         },
-        rules: {},
+        rules: {
+            "no-empty": ["error", { allowEmptyCatch: true }],
+        },
     },
 );

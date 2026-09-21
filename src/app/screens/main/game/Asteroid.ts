@@ -1,19 +1,19 @@
 import { Graphics } from "pixi.js";
 
-/**
- * Астероїд, створений виключно графічними засобами бібліотеки Pixi.js.
- * Знищується від одного попадання кулі.
- */
+const ASTEROID_DEFAULT_RADIUS = 24;
+const ROTATION_SPEED_RANGE = 1.5;
+const SHAPE_POINT_COUNT = 8;
+
 export class Asteroid extends Graphics {
     public radius: number;
     public rotSpeed: number;
 
-    constructor(x: number, y: number, radius = 24) {
+    constructor(x: number, y: number, radius = ASTEROID_DEFAULT_RADIUS) {
         super();
         this.x = x;
         this.y = y;
         this.radius = radius;
-        this.rotSpeed = (Math.random() - 0.5) * 1.5;
+        this.rotSpeed = (Math.random() - 0.5) * ROTATION_SPEED_RANGE;
 
         this.drawAsteroid();
     }
@@ -21,10 +21,8 @@ export class Asteroid extends Graphics {
     private drawAsteroid(): void {
         this.clear();
         const points: number[] = [];
-        const numPoints = 8;
+        const numPoints = SHAPE_POINT_COUNT;
         const r = this.radius;
-
-        // Створюємо нерівні краї астероїда
         const offsets = [1.0, 0.85, 1.1, 0.9, 1.05, 0.8, 1.15, 0.95];
         for (let i = 0; i < numPoints; i++) {
             const angle = (i / numPoints) * Math.PI * 2;
@@ -32,12 +30,10 @@ export class Asteroid extends Graphics {
             points.push(Math.cos(angle) * curR, Math.sin(angle) * curR);
         }
 
-        // Тіло астероїда
         this.poly(points)
             .fill({ color: 0x5a5c6e, alpha: 1 })
             .stroke({ width: 2, color: 0x8b8d9e });
 
-        // Кратери на астероїді
         this.circle(-r * 0.3, -r * 0.2, r * 0.22).fill({
             color: 0x414352,
             alpha: 0.85,
@@ -53,7 +49,6 @@ export class Asteroid extends Graphics {
     }
 
     public update(deltaSeconds: number): void {
-        // Повільне обертання для красивої анімації
         this.rotation += this.rotSpeed * deltaSeconds;
     }
 }

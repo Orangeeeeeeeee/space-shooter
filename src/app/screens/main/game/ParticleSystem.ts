@@ -1,5 +1,14 @@
 import { Container, Graphics } from "pixi.js";
 
+const DEFAULT_BURST_COUNT = 16;
+const DEFAULT_BURST_SPEED_MAX = 220;
+const PARTICLE_SPEED_MIN = 30;
+const PARTICLE_SIZE_MIN = 2;
+const PARTICLE_SIZE_RANGE = 3;
+const PARTICLE_DECAY_MIN = 1.2;
+const PARTICLE_DECAY_RANGE = 1.5;
+const VELOCITY_DAMPING = 0.97;
+
 interface Particle {
     x: number;
     y: number;
@@ -25,12 +34,12 @@ export class ParticleSystem extends Container {
         x: number,
         y: number,
         colors: number[] = [0xffffff, 0xffa500, 0xff4500, 0x00ffff],
-        count = 16,
-        speedMax = 220,
+        count = DEFAULT_BURST_COUNT,
+        speedMax = DEFAULT_BURST_SPEED_MAX,
     ): void {
         for (let i = 0; i < count; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const speed = Math.random() * speedMax + 30;
+            const speed = Math.random() * speedMax + PARTICLE_SPEED_MIN;
             const color = colors[Math.floor(Math.random() * colors.length)];
 
             this.particles.push({
@@ -38,9 +47,10 @@ export class ParticleSystem extends Container {
                 y,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
-                size: Math.random() * 3 + 2,
+                size: Math.random() * PARTICLE_SIZE_RANGE + PARTICLE_SIZE_MIN,
                 alpha: 1,
-                decay: Math.random() * 1.5 + 1.2,
+                decay:
+                    Math.random() * PARTICLE_DECAY_RANGE + PARTICLE_DECAY_MIN,
                 color,
             });
         }
@@ -54,8 +64,8 @@ export class ParticleSystem extends Container {
             const p = this.particles[i];
             p.x += p.vx * deltaSeconds;
             p.y += p.vy * deltaSeconds;
-            p.vx *= 0.97;
-            p.vy *= 0.97;
+            p.vx *= VELOCITY_DAMPING;
+            p.vy *= VELOCITY_DAMPING;
             p.alpha -= p.decay * deltaSeconds;
 
             if (p.alpha <= 0) {

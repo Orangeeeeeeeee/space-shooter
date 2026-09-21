@@ -11,24 +11,50 @@ import { RoundedBox } from "../../ui/RoundedBox";
 
 import { Asteroid } from "./game/Asteroid";
 import { Boss } from "./game/Boss";
+import {
+    BOSS_MAX_HP,
+    DEFAULT_SCREEN_HEIGHT,
+    DEFAULT_SCREEN_WIDTH,
+    LEVEL_TIME_SECONDS,
+    PLAYER_START_AMMO,
+} from "./game/gameConfig";
 import { Laser } from "./game/Laser";
 import { ParticleSystem } from "./game/ParticleSystem";
 import { Player } from "./game/Player";
 import { soundEffects } from "./game/SoundEffects";
 import { Starfield } from "./game/Starfield";
 
+const ASTEROID_COUNT = 6;
+const ASTEROID_SPAWN_MARGIN_X = 80;
+const ASTEROID_SPAWN_BASE_Y = 110;
+const ASTEROID_SPAWN_ROW_SPACING = 90;
+const ASTEROID_SPAWN_JITTER_X = 60;
+const ASTEROID_SPAWN_JITTER_Y = 30;
+const ASTEROID_SPAWN_RADIUS_MIN = 22;
+const ASTEROID_SPAWN_RADIUS_RANGE = 6;
+const BOSS_START_Y = 120;
+const BOSS_LASER_SPEED = 360;
+const LEVEL_TRANSITION_DURATION_SECONDS = 2.0;
+const PLAYER_Y_OFFSET_FROM_BOTTOM = 80;
+const LASER_OFFSCREEN_MARGIN = 30;
+const TIME_WARNING_THRESHOLD_SECONDS = 10;
+const AMMO_WARNING_THRESHOLD = 2;
+const ASTEROID_HIT_BURST = { count: 18, speedMax: 180 };
+const LASER_COLLISION_BURST = { count: 10, speedMax: 120 };
+const PLAYER_DEATH_BURST = { count: 26, speedMax: 240 };
+const BOSS_DEATH_BURST = { count: 40, speedMax: 300 };
+const BOSS_HIT_BURST = { count: 10, speedMax: 120 };
+
 export class MainScreen extends Container {
     public static assetBundles = ["main"];
 
-    private screenWidth = 800;
-    private screenHeight = 600;
+    private screenWidth = DEFAULT_SCREEN_WIDTH;
+    private screenHeight = DEFAULT_SCREEN_HEIGHT;
 
-    // Шари екрану
     private starfield: Starfield;
     private gameLayer: Container;
     private uiLayer: Container;
 
-    // Ігрові сутності
     private player: Player;
     private playerLasers: Laser[] = [];
     private bossLasers: Laser[] = [];
@@ -36,25 +62,21 @@ export class MainScreen extends Container {
     private boss: Boss | null = null;
     private particleSystem: ParticleSystem;
 
-    // Стан гри
     private currentLevel: 1 | 2 = 1;
-    private timeLeft = 60; // 60 секунд на рівень
+    private timeLeft = LEVEL_TIME_SECONDS;
     private isGameOver = false;
     private isPaused = false;
 
-    // Елементи інтерфейсу (HUD)
     private timerLabel: Label;
     private ammoLabel: Label;
     private levelLabel: Label;
     private pauseButton: FancyButton;
     private settingsButton: FancyButton;
 
-    // Банер переходу між рівнями
     private levelTransitionBanner: Container;
     private transitionLabel: Label;
     private transitionTimer = 0;
 
-    // Діалогове вікно завершення гри (YOU WIN / YOU LOSE)
     private resultModal: Container;
     private resultTitle: Label;
     private resultSubtext: Label;
@@ -63,11 +85,9 @@ export class MainScreen extends Container {
     constructor() {
         super();
 
-        // 1. Зоряний фон
         this.starfield = new Starfield();
         this.addChild(this.starfield);
 
-        // 2. Ігровий шар
         this.gameLayer = new Container();
         this.addChild(this.gameLayer);
 
@@ -77,13 +97,11 @@ export class MainScreen extends Container {
         this.player = new Player();
         this.gameLayer.addChild(this.player);
 
-        // 3. Інтерфейсний шар (HUD)
         this.uiLayer = new Container();
         this.addChild(this.uiLayer);
 
-        // Таймер зворотного відліку (створено через PIXI.js)
         this.timerLabel = new Label({
-            text: "TIME: 60s",
+            text: `TIME: ${LEVEL_TIME_SECONDS}s`,
             style: {
                 fontSize: 24,
                 fill: 0xffffff,
@@ -94,7 +112,7 @@ export class MainScreen extends Container {
 
         // Залишок набоїв (створено через PIXI.js)
         this.ammoLabel = new Label({
-            text: "AMMO: 10/10",
+            text: `AMMO: ${PLAYER_START_AMMO}/${PLAYER_START_AMMO}`,
             style: {
                 fontSize: 24,
                 fill: 0x00f5d4,
@@ -207,7 +225,7 @@ export class MainScreen extends Container {
     /** Запуск 1-го рівня гри з астероїдами */
     public startLevel1(): void {
         this.currentLevel = 1;
-        this.timeLeft = 60;
+        this.timeLeft = LEVEL_TIME_SECONDS;
         this.isGameOver = false;
         this.resultModal.visible = false;
         this.levelTransitionBanner.visible = false;
@@ -219,7 +237,11 @@ export class MainScreen extends Container {
         this.particleSystem.clearAll();
 
         // Гравець: тільки горизонтальний рух, позиція внизу, 10 набоїв
-        this.player.reset(this.screenWidth * 0.5, this.screenHeight - 80, 10);
+        this.player.reset(
+            this.screenWidth * 0.5,
+            this.screenHeight - PLAYER_Y_OFFSET_FROM_BOTTOM,
+            PLAYER_START_AMMO,
+        );
 
         // Довільна розстановка астероїдів
         this.spawnAsteroids();
@@ -229,8 +251,8 @@ export class MainScreen extends Container {
 
     /** Створення та довільна розстановка астероїдів у верхній половині екрану */
     private spawnAsteroids(): void {
-        const asteroidCount = 6; // Оскільки у гравця 10 пострілів, 6 астероїдів - чесний виклик
-        const marginX = 80;
+        const asteroidCount = ASTEROID_COUNT; // Оскільки у гравця 10 пострілів, 6 астероїдів - чесний виклик
+        const marginX = ASTEROID_SPAWN_MARGIN_X;
         const availableWidth = this.screenWidth - marginX * 2;
 
         for (let i = 0; i < asteroidCount; i++) {
@@ -238,13 +260,21 @@ export class MainScreen extends Container {
             const col = i % 3;
             const row = Math.floor(i / 3);
             const baseX = marginX + col * (availableWidth / 2.5);
-            const baseY = 110 + row * 90;
+            const baseY =
+                ASTEROID_SPAWN_BASE_Y + row * ASTEROID_SPAWN_ROW_SPACING;
 
             // Додаємо випадкове зміщення
-            const randX = baseX + (Math.random() - 0.5) * 60;
-            const randY = baseY + (Math.random() - 0.5) * 30;
+            const randX =
+                baseX + (Math.random() - 0.5) * ASTEROID_SPAWN_JITTER_X;
+            const randY =
+                baseY + (Math.random() - 0.5) * ASTEROID_SPAWN_JITTER_Y;
 
-            const asteroid = new Asteroid(randX, randY, Math.random() * 6 + 22);
+            const asteroid = new Asteroid(
+                randX,
+                randY,
+                Math.random() * ASTEROID_SPAWN_RADIUS_RANGE +
+                    ASTEROID_SPAWN_RADIUS_MIN,
+            );
             this.asteroids.push(asteroid);
             this.gameLayer.addChild(asteroid);
         }
@@ -253,20 +283,20 @@ export class MainScreen extends Container {
     /** Перехід на 2-й рівень з Босом */
     public startLevel2(): void {
         this.currentLevel = 2;
-        this.timeLeft = 60; // Знов час обмежений 60 секундами
+        this.timeLeft = LEVEL_TIME_SECONDS; // Знов час обмежений 60 секундами
         this.clearLasers();
         this.clearAsteroids();
 
         // У гравця знов доступно 10 пострілів
-        this.player.ammo = 10;
-        this.player.maxAmmo = 10;
+        this.player.ammo = PLAYER_START_AMMO;
+        this.player.maxAmmo = PLAYER_START_AMMO;
 
         // Створюємо Боса
-        this.boss = new Boss(this.screenWidth * 0.5, 120);
+        this.boss = new Boss(this.screenWidth * 0.5, BOSS_START_Y);
         this.gameLayer.addChild(this.boss);
 
         // Банер переходу
-        this.transitionTimer = 2.0;
+        this.transitionTimer = LEVEL_TRANSITION_DURATION_SECONDS;
         this.levelTransitionBanner.visible = true;
 
         this.updateHUD();
@@ -306,18 +336,20 @@ export class MainScreen extends Container {
         // Оновлюємо таймер
         const seconds = Math.max(0, Math.ceil(this.timeLeft));
         this.timerLabel.text = `TIME: ${seconds}s`;
-        this.timerLabel.style.fill = seconds <= 10 ? 0xff4757 : 0xffffff;
+        this.timerLabel.style.fill =
+            seconds <= TIME_WARNING_THRESHOLD_SECONDS ? 0xff4757 : 0xffffff;
 
         // Оновлюємо лічильник набоїв
-        this.ammoLabel.text = `AMMO: ${this.player.ammo}/10`;
-        this.ammoLabel.style.fill = this.player.ammo <= 2 ? 0xff6b81 : 0x00f5d4;
+        this.ammoLabel.text = `AMMO: ${this.player.ammo}/${PLAYER_START_AMMO}`;
+        this.ammoLabel.style.fill =
+            this.player.ammo <= AMMO_WARNING_THRESHOLD ? 0xff6b81 : 0x00f5d4;
 
         // Назва рівня
         if (this.currentLevel === 1) {
             this.levelLabel.text = `LEVEL 1: ASTEROIDS (${this.asteroids.length} left)`;
         } else {
             const bossHp = this.boss ? this.boss.hp : 0;
-            this.levelLabel.text = `LEVEL 2: BOSS (HP: ${bossHp}/4)`;
+            this.levelLabel.text = `LEVEL 2: BOSS (HP: ${bossHp}/${BOSS_MAX_HP})`;
         }
     }
 
@@ -384,7 +416,7 @@ export class MainScreen extends Container {
             laser.update(deltaSeconds);
 
             // Видаляємо кулі, що вилетіли за екран
-            if (laser.y < -30) {
+            if (laser.y < -LASER_OFFSCREEN_MARGIN) {
                 this.gameLayer.removeChild(laser);
                 laser.destroy();
                 this.playerLasers.splice(i, 1);
@@ -397,7 +429,7 @@ export class MainScreen extends Container {
             laser.update(deltaSeconds);
 
             // Видаляємо кулі, що вилетіли за екран
-            if (laser.y > this.screenHeight + 30) {
+            if (laser.y > this.screenHeight + LASER_OFFSCREEN_MARGIN) {
                 this.gameLayer.removeChild(laser);
                 laser.destroy();
                 this.bossLasers.splice(i, 1);
@@ -442,8 +474,8 @@ export class MainScreen extends Container {
                             astX,
                             astY,
                             [0x8b8d9e, 0x5a5c6e, 0xffa502, 0xffffff],
-                            18,
-                            180,
+                            ASTEROID_HIT_BURST.count,
+                            ASTEROID_HIT_BURST.speedMax,
                         );
 
                         this.updateHUD();
@@ -475,7 +507,7 @@ export class MainScreen extends Container {
         else if (this.currentLevel === 2 && this.boss) {
             // Оновлення Боса (рух, стрільба кожні 2 секунди)
             this.boss.update(deltaSeconds, this.screenWidth, (bx, by) => {
-                const bLaser = new Laser(bx, by, false, 360);
+                const bLaser = new Laser(bx, by, false, BOSS_LASER_SPEED);
                 this.bossLasers.push(bLaser);
                 this.gameLayer.addChild(bLaser);
                 soundEffects.playEnemyLaser();
@@ -508,8 +540,8 @@ export class MainScreen extends Container {
                             hitX,
                             hitY,
                             [0x00f5ff, 0xff1744, 0xffffff],
-                            10,
-                            120,
+                            LASER_COLLISION_BURST.count,
+                            LASER_COLLISION_BURST.speedMax,
                         );
                         break;
                     }
@@ -535,8 +567,8 @@ export class MainScreen extends Container {
                         playerX,
                         playerY,
                         [0xff4757, 0xffa502, 0xffffff],
-                        26,
-                        240,
+                        PLAYER_DEATH_BURST.count,
+                        PLAYER_DEATH_BURST.speedMax,
                     );
                     this.player.visible = false;
                     this.endGame(false, "Ship Destroyed by Boss!");
@@ -572,8 +604,8 @@ export class MainScreen extends Container {
                                 bossX,
                                 bossY,
                                 [0xb536f5, 0xff0055, 0xffffff, 0xffa502],
-                                40,
-                                300,
+                                BOSS_DEATH_BURST.count,
+                                BOSS_DEATH_BURST.speedMax,
                             );
                             this.gameLayer.removeChild(this.boss);
                             this.boss.destroy();
@@ -587,8 +619,8 @@ export class MainScreen extends Container {
                                 hitX,
                                 hitY,
                                 [0x00f5ff, 0xffffff],
-                                10,
-                                120,
+                                BOSS_HIT_BURST.count,
+                                BOSS_HIT_BURST.speedMax,
                             );
                         }
                         break;
@@ -653,7 +685,7 @@ export class MainScreen extends Container {
         this.levelTransitionBanner.y = height * 0.4;
 
         // Позиція гравця на фіксованій горизонталі внизу
-        this.player.y = height - 80;
+        this.player.y = height - PLAYER_Y_OFFSET_FROM_BOTTOM;
         if (this.player.x > width - this.player.radius) {
             this.player.x = width - this.player.radius;
         }

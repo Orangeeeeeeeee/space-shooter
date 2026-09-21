@@ -3,11 +3,7 @@ import { Graphics } from "pixi.js";
 
 import { Label } from "./Label";
 
-/**
- * A volume slider component to be used in the Settings popup.
- */
 export class VolumeSlider extends Slider {
-    /** Message displayed for the slider */
     public messageLabel: Label;
 
     constructor(label: string, min = -0.1, max = 100, value = 100) {

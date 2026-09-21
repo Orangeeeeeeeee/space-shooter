@@ -1,9 +1,46 @@
 import { userSettings } from "../../../utils/userSettings";
 
-/**
- * Web Audio synthesized sound effects for space shooter.
- * Provides instant, zero-asset audio for lasers, hits, and explosions.
- */
+const AUDIBLE_VOLUME_THRESHOLD = 0.001;
+
+const LASER_SOUND = {
+    startFreq: 880,
+    endFreq: 110,
+    rampDuration: 0.12,
+    gain: 0.18,
+    stopDelay: 0.13,
+};
+
+const ENEMY_LASER_SOUND = {
+    startFreq: 320,
+    endFreq: 80,
+    rampDuration: 0.14,
+    gain: 0.12,
+    stopDelay: 0.15,
+};
+
+const HIT_SOUND = {
+    startFreq: 220,
+    endFreq: 50,
+    rampDuration: 0.08,
+    gain: 0.2,
+    stopDelay: 0.09,
+};
+
+const EXPLOSION_SOUND = {
+    duration: 0.35,
+    startFilterFreq: 800,
+    endFilterFreq: 60,
+    gain: 0.3,
+};
+
+const GAME_OVER_SOUND = {
+    notes: [220, 196, 174, 130],
+    noteSpacing: 0.12,
+    gain: 0.18,
+    noteDuration: 0.2,
+    stopDelay: 0.22,
+};
+
 class SoundEffectsManager {
     private ctx: AudioContext | null = null;
 
@@ -29,102 +66,109 @@ class SoundEffectsManager {
         return userSettings.getMasterVolume() * userSettings.getSfxVolume();
     }
 
-    /** Play a synthesized laser shot sound */
     public playLaser(): void {
         try {
             this.initContext();
             if (!this.ctx) return;
             const vol = this.getVolume();
-            if (vol <= 0.001) return;
+            if (vol <= AUDIBLE_VOLUME_THRESHOLD) return;
 
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
-
             const now = this.ctx.currentTime;
             osc.type = "sawtooth";
-            osc.frequency.setValueAtTime(880, now);
-            osc.frequency.exponentialRampToValueAtTime(110, now + 0.12);
+            osc.frequency.setValueAtTime(LASER_SOUND.startFreq, now);
+            osc.frequency.exponentialRampToValueAtTime(
+                LASER_SOUND.endFreq,
+                now + LASER_SOUND.rampDuration,
+            );
 
-            gain.gain.setValueAtTime(0.18 * vol, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+            gain.gain.setValueAtTime(LASER_SOUND.gain * vol, now);
+            gain.gain.exponentialRampToValueAtTime(
+                AUDIBLE_VOLUME_THRESHOLD,
+                now + LASER_SOUND.rampDuration,
+            );
 
             osc.connect(gain);
             gain.connect(this.ctx.destination);
 
             osc.start(now);
-            osc.stop(now + 0.13);
-        } catch {
-            // Audio context might be restricted before gesture
-        }
+            osc.stop(now + LASER_SOUND.stopDelay);
+        } catch {}
     }
 
-    /** Play an enemy laser shot sound */
     public playEnemyLaser(): void {
         try {
             this.initContext();
             if (!this.ctx) return;
             const vol = this.getVolume();
-            if (vol <= 0.001) return;
+            if (vol <= AUDIBLE_VOLUME_THRESHOLD) return;
 
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
-
             const now = this.ctx.currentTime;
             osc.type = "square";
-            osc.frequency.setValueAtTime(320, now);
-            osc.frequency.exponentialRampToValueAtTime(80, now + 0.14);
+            osc.frequency.setValueAtTime(ENEMY_LASER_SOUND.startFreq, now);
+            osc.frequency.exponentialRampToValueAtTime(
+                ENEMY_LASER_SOUND.endFreq,
+                now + ENEMY_LASER_SOUND.rampDuration,
+            );
 
-            gain.gain.setValueAtTime(0.12 * vol, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+            gain.gain.setValueAtTime(ENEMY_LASER_SOUND.gain * vol, now);
+            gain.gain.exponentialRampToValueAtTime(
+                AUDIBLE_VOLUME_THRESHOLD,
+                now + ENEMY_LASER_SOUND.rampDuration,
+            );
 
             osc.connect(gain);
             gain.connect(this.ctx.destination);
 
             osc.start(now);
-            osc.stop(now + 0.15);
-        } catch {
-            // Ignore audio error
-        }
+            osc.stop(now + ENEMY_LASER_SOUND.stopDelay);
+        } catch {}
     }
 
-    /** Play a hit/impact sound */
     public playHit(): void {
         try {
             this.initContext();
             if (!this.ctx) return;
             const vol = this.getVolume();
-            if (vol <= 0.001) return;
+            if (vol <= AUDIBLE_VOLUME_THRESHOLD) return;
 
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
-
             const now = this.ctx.currentTime;
             osc.type = "triangle";
-            osc.frequency.setValueAtTime(220, now);
-            osc.frequency.exponentialRampToValueAtTime(50, now + 0.08);
+            osc.frequency.setValueAtTime(HIT_SOUND.startFreq, now);
+            osc.frequency.exponentialRampToValueAtTime(
+                HIT_SOUND.endFreq,
+                now + HIT_SOUND.rampDuration,
+            );
 
-            gain.gain.setValueAtTime(0.2 * vol, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+            gain.gain.setValueAtTime(HIT_SOUND.gain * vol, now);
+            gain.gain.exponentialRampToValueAtTime(
+                AUDIBLE_VOLUME_THRESHOLD,
+                now + HIT_SOUND.rampDuration,
+            );
 
             osc.connect(gain);
             gain.connect(this.ctx.destination);
 
             osc.start(now);
-            osc.stop(now + 0.09);
-        } catch {
-            // Ignore audio error
-        }
+            osc.stop(now + HIT_SOUND.stopDelay);
+        } catch {}
     }
 
-    /** Play an explosion sound */
     public playExplosion(): void {
         try {
             this.initContext();
             if (!this.ctx) return;
             const vol = this.getVolume();
-            if (vol <= 0.001) return;
+            if (vol <= AUDIBLE_VOLUME_THRESHOLD) return;
 
-            const bufferSize = Math.floor(this.ctx.sampleRate * 0.35);
+            const bufferSize = Math.floor(
+                this.ctx.sampleRate * EXPLOSION_SOUND.duration,
+            );
             const buffer = this.ctx.createBuffer(
                 1,
                 bufferSize,
@@ -141,54 +185,60 @@ class SoundEffectsManager {
             const filter = this.ctx.createBiquadFilter();
             filter.type = "lowpass";
             const now = this.ctx.currentTime;
-            filter.frequency.setValueAtTime(800, now);
-            filter.frequency.exponentialRampToValueAtTime(60, now + 0.35);
+            filter.frequency.setValueAtTime(
+                EXPLOSION_SOUND.startFilterFreq,
+                now,
+            );
+            filter.frequency.exponentialRampToValueAtTime(
+                EXPLOSION_SOUND.endFilterFreq,
+                now + EXPLOSION_SOUND.duration,
+            );
 
             const gain = this.ctx.createGain();
-            gain.gain.setValueAtTime(0.3 * vol, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+            gain.gain.setValueAtTime(EXPLOSION_SOUND.gain * vol, now);
+            gain.gain.exponentialRampToValueAtTime(
+                AUDIBLE_VOLUME_THRESHOLD,
+                now + EXPLOSION_SOUND.duration,
+            );
 
             noise.connect(filter);
             filter.connect(gain);
             gain.connect(this.ctx.destination);
 
             noise.start(now);
-        } catch {
-            // Ignore audio error
-        }
+        } catch {}
     }
 
-    /** Play a game over sound */
     public playGameOver(): void {
         try {
             this.initContext();
             if (!this.ctx) return;
             const vol = this.getVolume();
-            if (vol <= 0.001) return;
+            if (vol <= AUDIBLE_VOLUME_THRESHOLD) return;
 
-            const notes = [220, 196, 174, 130];
             const now = this.ctx.currentTime;
 
-            notes.forEach((freq, idx) => {
+            GAME_OVER_SOUND.notes.forEach((freq, idx) => {
                 const osc = this.ctx!.createOscillator();
                 const gain = this.ctx!.createGain();
-                const startTime = now + idx * 0.12;
+                const startTime = now + idx * GAME_OVER_SOUND.noteSpacing;
 
                 osc.type = "sawtooth";
                 osc.frequency.setValueAtTime(freq, startTime);
 
-                gain.gain.setValueAtTime(0.18 * vol, startTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.2);
+                gain.gain.setValueAtTime(GAME_OVER_SOUND.gain * vol, startTime);
+                gain.gain.exponentialRampToValueAtTime(
+                    AUDIBLE_VOLUME_THRESHOLD,
+                    startTime + GAME_OVER_SOUND.noteDuration,
+                );
 
                 osc.connect(gain);
                 gain.connect(this.ctx!.destination);
 
                 osc.start(startTime);
-                osc.stop(startTime + 0.22);
+                osc.stop(startTime + GAME_OVER_SOUND.stopDelay);
             });
-        } catch {
-            // Ignore audio error
-        }
+        } catch {}
     }
 }
 
